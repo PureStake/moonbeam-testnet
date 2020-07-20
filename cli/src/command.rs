@@ -47,7 +47,7 @@ impl SubstrateCli for Cli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		let id = if id == "" {
 			let n = get_exec_name().unwrap_or_default();
-			["polkadot", "kusama", "westend", "rococo"].iter()
+			["polkadot", "kusama", "westend", "rococo", "moonbeam"].iter()
 				.cloned()
 				.find(|&chain| n.starts_with(chain))
 				.unwrap_or("polkadot")
@@ -68,6 +68,9 @@ impl SubstrateCli for Cli {
 			"rococo-staging" => Box::new(service::chain_spec::rococo_staging_testnet_config()),
 			"rococo-local" => Box::new(service::chain_spec::rococo_local_testnet_config()),
 			"rococo" => Box::new(service::chain_spec::rococo_config()?),
+			"moonbeam-staging" => Box::new(service::chain_spec::moonbeam_staging_testnet_config()),
+			"moonbeam-local" => Box::new(service::chain_spec::moonbeam_local_testnet_config()),
+			"moonbeam" => Box::new(service::chain_spec::moonbeam_config()?),
 			path if self.run.force_kusama => {
 				Box::new(service::KusamaChainSpec::from_json_file(std::path::PathBuf::from(path))?)
 			},
@@ -158,6 +161,18 @@ pub fn run() -> Result<()> {
 					Role::Light => service::rococo_new_light(config)
 						.map(|(components, _)| components),
 					_ => service::rococo_new_full(
+						config,
+						None,
+						None,
+						authority_discovery_enabled,
+						6000,
+					).map(|(components, _, _)| components)
+				})
+			} else if chain_spec.is_moonbeam() {
+				runtime.run_node_until_exit(|config| match config.role {
+					Role::Light => service::moonbeam_new_light(config)
+						.map(|(components, _)| components),
+					_ => service::moonbeam_new_full(
 						config,
 						None,
 						None,

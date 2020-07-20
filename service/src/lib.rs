@@ -83,6 +83,13 @@ native_executor_instance!(
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
+native_executor_instance!(
+	pub MoonbeamExecutor,
+	moonbeam_runtime::api::dispatch,
+	moonbeam_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection<Extrinsic: codec::Codec + Send + Sync + 'static>:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
@@ -135,6 +142,9 @@ pub trait IdentifyVariant {
 
 	/// Returns if this is a configuration for the `Rococo` network.
 	fn is_rococo(&self) -> bool;
+
+	/// Returns if this is a configuration for the `Moonbeam` network.
+	fn is_moonbeam(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
@@ -148,6 +158,10 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 
 	fn is_rococo(&self) -> bool {
 		self.id().starts_with("rococo") || self.id().starts_with("roc")
+	}
+
+	fn is_moonbeam(&self) -> bool {
+		self.id().starts_with("moonbeam") || self.id().starts_with("moo")
 	}
 }
 
@@ -879,6 +893,40 @@ pub fn rococo_new_full(
 	Ok((service, client, handles))
 }
 
+
+/// Create a new Moonbeam service for a full node.
+#[cfg(feature = "full-node")]
+pub fn moonbeam_new_full(
+	mut config: Configuration,
+	collating_for: Option<(CollatorId, parachain::Id)>,
+	max_block_data_size: Option<u64>,
+	authority_discovery_enabled: bool,
+	slot_duration: u64,
+)
+	-> Result<(
+		TaskManager,
+		Arc<impl PolkadotClient<
+			Block,
+			TFullBackend<Block>,
+			moonbeam_runtime::RuntimeApi
+		>>,
+		FullNodeHandles,
+	), ServiceError>
+{
+	let (service, client, handles, _, _) = new_full!(
+		config,
+		collating_for,
+		max_block_data_size,
+		authority_discovery_enabled,
+		slot_duration,
+		None,
+		moonbeam_runtime::RuntimeApi,
+		MoonbeamExecutor,
+	);
+
+	Ok((service, client, handles))
+}
+
 /// Handles to other sub-services that full nodes instantiate, which consumers
 /// of the node may use.
 #[cfg(feature = "full-node")]
@@ -918,4 +966,11 @@ pub fn rococo_new_light(mut config: Configuration, ) -> Result<
 	(TaskManager, Arc<RpcHandlers>), ServiceError
 > {
 	new_light!(config, rococo_runtime::RuntimeApi, RococoExecutor)
+}
+
+/// Create a new Moonbeam service for a light client.
+pub fn moonbeam_new_light(mut config: Configuration, ) -> Result<
+	(TaskManager, Arc<RpcHandlers>), ServiceError
+> {
+	new_light!(config, moonbeam_runtime::RuntimeApi, MoonbeamExecutor)
 }

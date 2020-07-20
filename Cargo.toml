@@ -37,6 +37,7 @@ members = [
 	"runtime/kusama",
 	"runtime/westend",
 	"runtime/rococo",
+	"runtime/moonbeam",
 	"runtime/test-runtime",
 	"runtime/test-runtime/client",
 	"service",
